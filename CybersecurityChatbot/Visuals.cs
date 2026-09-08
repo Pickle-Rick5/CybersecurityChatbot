@@ -1,12 +1,17 @@
 ﻿using System;
 using System.IO;
-using System.Media;
+using System.Runtime.InteropServices; // Required to use native Windows Audio components
+using System.Text;
 using System.Threading;
 
 namespace CybersecurityChatbot
 {
     public static class Visuals
     {
+        // Import the native Windows Media command string player to handle all WAV types seamlessly
+        [DllImport("winmm.dll", EntryPoint = "mciSendStringA", CharSet = CharSet.Ansi, SetLastError = true)]
+        private static extern int mciSendString(string lpstrCommand, StringBuilder lpstrReturnString, int uReturnLength, IntPtr hwndCallback);
+
         // Setup console window theme colors
         public static void SetTheme()
         {
@@ -14,22 +19,29 @@ namespace CybersecurityChatbot
             Console.ForegroundColor = ConsoleColor.Cyan;
         }
 
-        // Question 1: Audio Playback (Plays your recorded WAV file)
+        // Question 1: Audio Playback (Plays any WAV file format using native Windows Multimedia)
         public static void PlayVoiceGreeting(string fileName)
         {
             try
             {
-                if (File.Exists(fileName))
+                // This looks directly inside the folder where your CybersecurityChatbot.exe sits
+                string absolutePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+
+                if (File.Exists(absolutePath))
                 {
-                    using (SoundPlayer player = new SoundPlayer(fileName))
-                    {
-                        player.Play(); // Plays in background
-                    }
+                    // Open the audio file using short file paths to prevent space character syntax issues
+                    mciSendString($"open \"{absolutePath}\" type waveaudio alias welcomeVoice", null, 0, IntPtr.Zero);
+
+                    // Play the audio file synchronously so it finishes before text rendering begins
+                    mciSendString("play welcomeVoice wait", null, 0, IntPtr.Zero);
+
+                    // Close the audio stream path to clean up memory footprint resources
+                    mciSendString("close welcomeVoice", null, 0, IntPtr.Zero);
                 }
             }
             catch
             {
-                // Fallback gracefully if computer sound is disabled
+                // Suppress failure paths safely if audio devices are missing
             }
         }
 
