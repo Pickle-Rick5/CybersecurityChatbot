@@ -7,14 +7,14 @@ namespace CybersecurityChatbot
 {
     public static class Visuals
     {
-        // Setup console window theme
+        // Setup console window theme colors
         public static void SetTheme()
         {
             Console.Title = "Cybersecurity Awareness Assistant";
             Console.ForegroundColor = ConsoleColor.Cyan;
         }
 
-        // Question 1: Audio Playback (System.Media)
+        // Question 1: Audio Playback (Plays your recorded WAV file)
         public static void PlayVoiceGreeting(string fileName)
         {
             try
@@ -23,18 +23,17 @@ namespace CybersecurityChatbot
                 {
                     using (SoundPlayer player = new SoundPlayer(fileName))
                     {
-                        // Plays asynchronously so the console UI displays immediately
-                        player.Play();
+                        player.Play(); // Plays in background
                     }
                 }
             }
             catch
             {
-                // Fallback gracefully if the host machine has no sound drivers
+                // Fallback gracefully if computer sound is disabled
             }
         }
 
-        // Question 2: Cybersecurity-Themed ASCII Art
+        // Question 2: Cybersecurity-Themed ASCII Shield Art
         public static void DisplayAsciiLogo()
         {
             Console.ForegroundColor = ConsoleColor.Green;
@@ -58,7 +57,7 @@ namespace CybersecurityChatbot
             foreach (char c in text)
             {
                 Console.Write(c);
-                Thread.Sleep(15); // Slight micro-delay
+                Thread.Sleep(15); // Tiny micro-delay to mimic human typing
             }
             Console.WriteLine();
         }
