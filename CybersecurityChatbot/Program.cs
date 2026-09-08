@@ -1,15 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CybersecurityChatbot
 {
-    internal class Program
+    class Program
     {
         static void Main(string[] args)
         {
+            // Initialization
+            Visuals.SetTheme();
+            Visuals.PlayVoiceGreeting("welcome.wav"); // Audio trigger
+            Visuals.DisplayAsciiLogo(); // Visual Header Display
+
+            Visuals.TypeText("Initializing communication lines...", ConsoleColor.DarkGray);
+            Visuals.TypeText("Chatbot: Hello! Please enter your name to start our safety briefing: ");
+
+            Console.ForegroundColor = ConsoleColor.White;
+            string name = Console.ReadLine();
+
+            // Question 5: Continuous Name Input Validation
+            while (string.IsNullOrWhiteSpace(name))
+            {
+                Visuals.TypeText("Chatbot: Entry invalid. Please type a valid name: ", ConsoleColor.Red);
+                Console.ForegroundColor = ConsoleColor.White;
+                name = Console.ReadLine();
+            }
+
+            Visuals.TypeText($"\nWelcome, {name}! Let's review common web safety patterns.", ConsoleColor.Cyan);
+            Visuals.ShowHelpMenu();
         }
     }
 }
