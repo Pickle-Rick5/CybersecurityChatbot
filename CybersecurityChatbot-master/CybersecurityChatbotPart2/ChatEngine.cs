@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CybersecurityChatbotPart2
 {
@@ -7,6 +8,7 @@ namespace CybersecurityChatbotPart2
     {
         private readonly string _userName;
         private readonly Random _random = new Random();
+        private string _currentTopic = null;
 
         private readonly Dictionary<string, List<string>> _topicResponses = new Dictionary<string, List<string>>
         {
@@ -42,6 +44,12 @@ namespace CybersecurityChatbotPart2
             }
         };
 
+        private readonly string[] _followUpPhrases =
+        {
+            "another tip", "tell me more", "explain more", "give me another",
+            "more info", "more information", "can you explain", "more"
+        };
+
         public ChatEngine(string userName)
         {
             _userName = userName;
@@ -67,10 +75,21 @@ namespace CybersecurityChatbotPart2
             if (cleanInput.Contains("help"))
                 return "You can ask me about: password, phishing, browsing, scam, or privacy.";
 
+            // Follow-up handling: stay on the current topic if the user asks for more
+            if (_followUpPhrases.Any(phrase => cleanInput.Contains(phrase)))
+            {
+                if (_currentTopic != null)
+                {
+                    return GetRandomResponse(_currentTopic);
+                }
+                return "I'd love to give you more detail — which topic are you asking about? (password, phishing, browsing, scam, or privacy)";
+            }
+
             foreach (var topic in _topicResponses.Keys)
             {
                 if (cleanInput.Contains(topic))
                 {
+                    _currentTopic = topic; // remember for follow-ups
                     return GetRandomResponse(topic);
                 }
             }
