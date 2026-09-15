@@ -62,12 +62,35 @@ namespace CybersecurityChatbotPart2
             shouldExit = false;
             string cleanInput = rawInput.Trim().ToLower();
 
+            // Exit handling stays outside sentiment wrapping — no need for empathy on a goodbye
             if (cleanInput == "exit" || cleanInput == "quit")
             {
                 shouldExit = true;
                 return $"Goodbye, {_userName}! Remember to stay alert and secure online.";
             }
 
+            string sentimentPrefix = DetectSentiment(cleanInput);
+            string coreReply = GetCoreResponse(cleanInput);
+
+            return string.IsNullOrEmpty(sentimentPrefix) ? coreReply : $"{sentimentPrefix} {coreReply}";
+        }
+
+        private string DetectSentiment(string input)
+        {
+            if (input.Contains("worried") || input.Contains("scared") || input.Contains("anxious"))
+                return "It's completely understandable to feel that way — online threats can be unsettling.";
+
+            if (input.Contains("frustrated") || input.Contains("annoyed") || input.Contains("angry"))
+                return "I hear you, this stuff can be frustrating. Let's work through it together.";
+
+            if (input.Contains("curious") || input.Contains("interesting") || input.Contains("wondering"))
+                return "Great question — curiosity is exactly how good security habits start!";
+
+            return "";
+        }
+
+        private string GetCoreResponse(string cleanInput)
+        {
             if (cleanInput.Contains("how are you"))
                 return "I am operating optimally! Ready to help protect your digital footprint.";
 
