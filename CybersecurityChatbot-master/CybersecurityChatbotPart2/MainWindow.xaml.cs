@@ -1,11 +1,16 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using System;
+using System.IO;
+using System.Media;
+using System.Windows;
 using System.Windows.Media;
 
 namespace CybersecurityChatbotPart2
 {
     public partial class MainWindow : Window
     {
+        private ChatEngine _engine;
+        private bool _awaitingName = true;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -14,40 +19,68 @@ namespace CybersecurityChatbotPart2
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Reuses the same WinMM voice greeting from Part 1
-            CybersecurityChatbot.Visuals.PlayVoiceGreeting("welcome.wav");
-
-            AddMessage("Chatbot: Welcome! GUI shell is up and running. Chat logic arrives in the next commit.", "#00FF9C");
+            PlayGreeting();
+            AddMessage("Chatbot: Hello! Please enter your name to start our safety briefing:", "#00FF9C");
         }
 
-        private void SendButton_Click(object sender, RoutedEventArgs e)
+        private void PlayGreeting()
         {
-            SendCurrentInput();
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "welcome.wav");
+                System.Diagnostics.Debug.WriteLine($"Looking for audio at: {path}");
+                System.Diagnostics.Debug.WriteLine($"File exists: {File.Exists(path)}");
+
+                if (File.Exists(path))
+                {
+                    var player = new SoundPlayer(path);
+                    player.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Audio error: {ex.Message}");
+            }
         }
+
+        private void SendButton_Click(object sender, RoutedEventArgs e) => SendCurrentInput();
 
         private void InputTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Enter)
-            {
                 SendCurrentInput();
-            }
         }
 
         private void SendCurrentInput()
         {
             string text = InputTextBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                AddMessage("Chatbot: Input cannot be empty. Please try again.", "#FF6B6B");
+                return;
+            }
 
             AddMessage($"You: {text}", "#FFD966");
             InputTextBox.Clear();
 
-            // Placeholder — real ChatEngine wiring happens in Commit 2
-            AddMessage("Chatbot: (logic not connected yet)", "#00FF9C");
+            if (_awaitingName)
+            {
+                _engine = new ChatEngine(text);
+                _awaitingName = false;
+                AddMessage($"Chatbot: Welcome, {text}! Ask me about password, phishing, browsing, scam, or privacy.", "#00FF9C");
+                return;
+            }
+
+            string response = _engine.GetResponse(text, out bool exit);
+            AddMessage($"Chatbot: {response}", exit ? "#FF6B6B" : "#00FF9C");
+
+            if (exit)
+                InputTextBox.IsEnabled = false;
         }
 
         private void AddMessage(string text, string hexColor)
         {
-            var block = new TextBlock
+            var block = new System.Windows.Controls.TextBlock
             {
                 Text = text,
                 FontFamily = new FontFamily("Consolas"),

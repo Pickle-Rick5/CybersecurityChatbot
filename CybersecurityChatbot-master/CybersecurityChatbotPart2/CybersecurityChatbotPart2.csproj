@@ -12,4 +12,10 @@
     <ProjectReference Include="..\CybersecurityChatbot\CybersecurityChatbot.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="welcome.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
