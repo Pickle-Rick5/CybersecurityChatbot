@@ -9,6 +9,8 @@ namespace CybersecurityChatbotPart2
         private readonly string _userName;
         private readonly Random _random = new Random();
         private string _currentTopic = null;
+        private string _favoriteTopic = null;
+        private readonly Dictionary<string, int> _topicMentionCounts = new Dictionary<string, int>();
 
         private readonly Dictionary<string, List<string>> _topicResponses = new Dictionary<string, List<string>>
         {
@@ -75,6 +77,20 @@ namespace CybersecurityChatbotPart2
             if (cleanInput.Contains("help"))
                 return "You can ask me about: password, phishing, browsing, scam, or privacy.";
 
+            // Explicit interest statement, e.g. "I'm interested in privacy"
+            if (cleanInput.Contains("interested in"))
+            {
+                foreach (var topic in _topicResponses.Keys)
+                {
+                    if (cleanInput.Contains(topic))
+                    {
+                        _favoriteTopic = topic;
+                        _currentTopic = topic;
+                        return $"Great, {_userName}! I'll remember that you're interested in {topic}. It's a crucial part of staying safe online.";
+                    }
+                }
+            }
+
             // Follow-up handling: stay on the current topic if the user asks for more
             if (_followUpPhrases.Any(phrase => cleanInput.Contains(phrase)))
             {
@@ -85,12 +101,31 @@ namespace CybersecurityChatbotPart2
                 return "I'd love to give you more detail — which topic are you asking about? (password, phishing, browsing, scam, or privacy)";
             }
 
+            // Topic keyword matching, with mention tracking for memory/recall
             foreach (var topic in _topicResponses.Keys)
             {
                 if (cleanInput.Contains(topic))
                 {
-                    _currentTopic = topic; // remember for follow-ups
-                    return GetRandomResponse(topic);
+                    _currentTopic = topic;
+
+                    if (!_topicMentionCounts.ContainsKey(topic))
+                        _topicMentionCounts[topic] = 0;
+                    _topicMentionCounts[topic]++;
+
+                    if (_favoriteTopic == null ||
+                        _topicMentionCounts[topic] > _topicMentionCounts.GetValueOrDefault(_favoriteTopic, 0))
+                    {
+                        _favoriteTopic = topic;
+                    }
+
+                    string baseResponse = GetRandomResponse(topic);
+
+                    if (topic == _favoriteTopic && _topicMentionCounts[topic] > 1)
+                    {
+                        return $"{baseResponse}\n\nSince you're clearly interested in {topic}, it's worth revisiting your settings around this regularly, {_userName}.";
+                    }
+
+                    return baseResponse;
                 }
             }
 
