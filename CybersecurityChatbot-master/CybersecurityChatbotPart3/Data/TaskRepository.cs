@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.Collections.Generic;
 using MySqlConnector;
 using CybersecurityChatbotPart3.Models;
@@ -64,6 +65,13 @@ namespace CybersecurityChatbotPart3.Data
                 });
             }
             return tasks;
+        }
+
+        public List<TaskItem> GetDueReminders()
+        {
+            return GetAllTasks()
+                .Where(t => !t.IsCompleted && t.ReminderDate.HasValue && t.ReminderDate.Value <= DateTime.Now)
+                .ToList();
         }
 
         public bool DeleteTask(int id) =>

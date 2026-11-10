@@ -10,5 +10,11 @@ namespace CybersecurityChatbotPart3.Models
         public DateTime? ReminderDate { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public string ReminderText => ReminderDate.HasValue
+            ? $"Reminder: {ReminderDate.Value:dd MMM yyyy}"
+            : "No reminder";
+
+        public string StatusText => IsCompleted ? "Completed" : "Pending";
     }
 }
