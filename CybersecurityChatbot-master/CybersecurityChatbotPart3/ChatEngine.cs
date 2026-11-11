@@ -98,7 +98,7 @@ namespace CybersecurityChatbotPart3
                 return "My purpose is to educate citizens against growing cyber threat landscapes in South Africa.";
 
             if (cleanInput.Contains("help"))
-                return "You can ask me about: password, phishing, browsing, scam, or privacy.";
+                return "You can ask me about: password, phishing, browsing, scam, or privacy. You can also say things like 'Add a task to enable two-factor authentication' or 'Remind me to update my password tomorrow'.";
 
             // Explicit interest statement, e.g. "I'm interested in privacy"
             if (cleanInput.Contains("interested in"))

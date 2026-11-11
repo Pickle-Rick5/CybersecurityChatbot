@@ -14,7 +14,7 @@ namespace CybersecurityChatbotPart3
         private ChatEngine _engine = null!;
         private bool _awaitingName = true;
         private readonly TaskRepository _taskRepo = new TaskRepository();
-
+        private NlpProcessor _nlp = null!;
         // Checks every 30 seconds whether any task reminder has come due
         private readonly DispatcherTimer _reminderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         private readonly HashSet<int> _notifiedReminders = new HashSet<int>();
@@ -106,12 +106,18 @@ namespace CybersecurityChatbotPart3
             if (_awaitingName)
             {
                 _engine = new ChatEngine(text);
+                _nlp = new NlpProcessor(_taskRepo);
                 _awaitingName = false;
                 AddMessage($"Chatbot: Welcome, {text}! Ask me about password, phishing, browsing, scam, or privacy, or click Tasks to manage your cybersecurity to-do list.", "#00FF9C");
                 CheckReminders();
                 return;
             }
 
+            if (_nlp.TryHandle(text, out string nlpReply))
+            {
+                AddMessage($"Chatbot: {nlpReply}", "#00FF9C");
+                return;
+            }
             string response = _engine.GetResponse(text, out bool exit);
             AddMessage($"Chatbot: {response}", exit ? "#FF6B6B" : "#00FF9C");
 

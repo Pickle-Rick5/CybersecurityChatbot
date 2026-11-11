@@ -74,6 +74,18 @@ namespace CybersecurityChatbotPart3.Data
                 .ToList();
         }
 
+        public bool UpdateReminder(int id, DateTime reminderDate)
+        {
+            const string sql = "UPDATE Tasks SET ReminderDate = @reminder WHERE Id = @id";
+
+            using var conn = new MySqlConnection(_connectionString);
+            conn.Open();
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@reminder", reminderDate);
+            cmd.Parameters.AddWithValue("@id", id);
+            return cmd.ExecuteNonQuery() > 0;
+        }
+
         public bool DeleteTask(int id) =>
             ExecuteById("DELETE FROM Tasks WHERE Id = @id", id);
 
