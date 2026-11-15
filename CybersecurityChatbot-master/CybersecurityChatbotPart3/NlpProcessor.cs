@@ -10,13 +10,14 @@ namespace CybersecurityChatbotPart3
     // phrase patterns and a small amount of conversation state.
     public class NlpProcessor
     {
-        private enum Intent { None, AddTask, SetReminder, ShowTasks }
+        private enum Intent { None, AddTask, SetReminder, ShowTasks, StartQuiz }
         private enum PendingState { None, AwaitingReminderChoice, AwaitingReminderTime }
 
         private readonly TaskRepository _repo;
 
         // Conversation state: the bot asked a follow-up question about a task it just saved
         private PendingState _pending = PendingState.None;
+        private bool _quizRequested;
         private int _pendingTaskId;
         private string _pendingTitle = "";
 
@@ -28,7 +29,10 @@ namespace CybersecurityChatbotPart3
             new(Intent.SetReminder, new[] { "remind me", "set a reminder", "set reminder", "add a reminder",
                                             "add reminder", "create a reminder", "create reminder" }),
             new(Intent.AddTask, new[] { "add a task", "add task", "new task", "create a task",
-                                        "create task", "add a to-do", "add to my tasks" })
+                                        "create task", "add a to-do", "add to my tasks" }),
+            new(Intent.StartQuiz, new[] { "start the quiz", "start quiz", "play the quiz", "take the quiz",
+                                          "quiz me", "play a game", "mini game", "mini-game",
+                                          "test my knowledge", "test me", "quiz" })
         };
 
         // Keyword in the task title -> helpful description the bot fills in
@@ -82,6 +86,12 @@ namespace CybersecurityChatbotPart3
         }
 
         // Returns true if the NLP layer handled the message, false if the normal ChatEngine should reply
+        public bool ConsumeQuizRequest()
+        {
+            bool requested = _quizRequested;
+            _quizRequested = false;
+            return requested;
+        }
         public bool TryHandle(string rawInput, out string response)
         {
             response = "";
@@ -96,10 +106,12 @@ namespace CybersecurityChatbotPart3
                         return true;
 
                     _pending = PendingState.None; // they moved on to something else
+
                 }
 
                 // 2. Work out what the user wants from keywords
                 switch (DetectIntent(lower))
+
                 {
                     case Intent.ShowTasks:
                         response = ShowTasks();
@@ -109,6 +121,10 @@ namespace CybersecurityChatbotPart3
                         return true;
                     case Intent.SetReminder:
                         response = CreateTask(lower, isReminderRequest: true);
+                        return true;
+                    case Intent.StartQuiz:
+                        _quizRequested = true;
+                        response = "Great idea! Opening the cybersecurity quiz. Good luck!";
                         return true;
                     default:
                         return false;

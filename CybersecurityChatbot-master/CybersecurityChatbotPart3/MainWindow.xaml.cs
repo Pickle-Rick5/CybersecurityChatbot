@@ -69,6 +69,24 @@ namespace CybersecurityChatbotPart3
             window.TaskChanged += message => AddMessage($"Chatbot: {message}", "#00FF9C");
             window.ShowDialog();
         }
+        private void QuizButton_Click(object sender, RoutedEventArgs e)
+        {
+            AddMessage("Chatbot: Starting the cybersecurity quiz. Good luck!", "#00FF9C");
+            StartQuiz();
+        }
+
+        private void StartQuiz()
+        {
+            var window = new QuizWindow { Owner = this };
+            window.QuizEnded += (answered, score, total, completed) =>
+            {
+                if (completed)
+                    AddMessage($"Chatbot: Quiz complete! You scored {score} out of {total}. {QuizWindow.GetFinalFeedback(score, total)}", "#00FF9C");
+                else
+                    AddMessage($"Chatbot: Quiz closed early after {answered} question(s), with {score} correct. Come back any time to finish it!", "#FFD966");
+            };
+            window.ShowDialog();
+        }
 
         private void CheckReminders()
         {
