@@ -10,20 +10,26 @@ namespace CybersecurityChatbotPart3
     // phrase patterns and a small amount of conversation state.
     public class NlpProcessor
     {
-        private enum Intent { None, AddTask, SetReminder, ShowTasks, StartQuiz }
+        private enum Intent { None, AddTask, SetReminder, ShowTasks, ShowLog, StartQuiz }
         private enum PendingState { None, AwaitingReminderChoice, AwaitingReminderTime }
 
         private readonly TaskRepository _repo;
+        private readonly ActivityLogger _log;
 
         // Conversation state: the bot asked a follow-up question about a task it just saved
         private PendingState _pending = PendingState.None;
-        private bool _quizRequested;
         private int _pendingTaskId;
         private string _pendingTitle = "";
+
+        // True right after the log is shown, so "show more" means "show the full log"
+        private bool _logJustShown;
+        private bool _quizRequested;
 
         // Intent -> trigger phrases (checked in order)
         private static readonly List<KeyValuePair<Intent, string[]>> IntentKeywords = new()
         {
+            new(Intent.ShowLog, new[] { "activity log", "show log", "view log", "show my log",
+                                        "what have you done", "what did you do", "recent actions" }),
             new(Intent.ShowTasks, new[] { "show my tasks", "show tasks", "view my tasks", "view tasks",
                                           "list my tasks", "list tasks", "what are my tasks", "my to-do list" }),
             new(Intent.SetReminder, new[] { "remind me", "set a reminder", "set reminder", "add a reminder",
@@ -80,25 +86,37 @@ namespace CybersecurityChatbotPart3
             ["ten"] = 10
         };
 
-        public NlpProcessor(TaskRepository repo)
+        public NlpProcessor(TaskRepository repo, ActivityLogger log)
         {
             _repo = repo;
+            _log = log;
         }
 
-        // Returns true if the NLP layer handled the message, false if the normal ChatEngine should reply
         public bool ConsumeQuizRequest()
         {
             bool requested = _quizRequested;
             _quizRequested = false;
             return requested;
         }
+
+        // Returns true if the NLP layer handled the message, false if the normal ChatEngine should reply
         public bool TryHandle(string rawInput, out string response)
         {
             response = "";
             string lower = rawInput.Trim().ToLower();
 
+            bool logWasJustShown = _logJustShown;
+            _logJustShown = false;
+
             try
             {
+                // 0. "show more" straight after the log was displayed shows the full history
+                if (logWasJustShown && IsShowMoreRequest(lower))
+                {
+                    response = _log.GetSummary(showAll: true);
+                    return true;
+                }
+
                 // 1. Is the user answering a question we just asked?
                 if (_pending != PendingState.None)
                 {
@@ -106,13 +124,15 @@ namespace CybersecurityChatbotPart3
                         return true;
 
                     _pending = PendingState.None; // they moved on to something else
-
                 }
 
                 // 2. Work out what the user wants from keywords
                 switch (DetectIntent(lower))
-
                 {
+                    case Intent.ShowLog:
+                        response = _log.GetSummary();
+                        _logJustShown = _log.HasMoreThanRecent;
+                        return true;
                     case Intent.ShowTasks:
                         response = ShowTasks();
                         return true;
@@ -136,6 +156,10 @@ namespace CybersecurityChatbotPart3
                 return true;
             }
         }
+
+        private static bool IsShowMoreRequest(string lower) =>
+            lower.Contains("show more") || lower.Contains("full log") || lower.Contains("full history") ||
+            lower.Contains("show all") || lower == "more";
 
         private static Intent DetectIntent(string lower)
         {
@@ -170,10 +194,16 @@ namespace CybersecurityChatbotPart3
 
             if (hasTime)
             {
+                _log.Add(isReminderRequest
+                    ? $"Reminder set via chat for '{title}' on {FormatWhen(when)}."
+                    : $"Task added via chat: '{title}' (reminder set for {FormatWhen(when)}).");
+
                 return isReminderRequest
                     ? $"Reminder set for '{title}' {matched} ({FormatWhen(when)})."
                     : $"Task added: '{title}'. I'll remind you {matched} ({FormatWhen(when)}).";
             }
+
+            _log.Add($"Task added via chat: '{title}' (no reminder yet).");
 
             _pendingTaskId = id;
             _pendingTitle = title;
@@ -195,6 +225,7 @@ namespace CybersecurityChatbotPart3
             if (TryParseTime(lower, out DateTime when, out string matched))
             {
                 _repo.UpdateReminder(_pendingTaskId, when);
+                _log.Add($"Reminder set via chat for '{_pendingTitle}' on {FormatWhen(when)}.");
                 response = $"Got it! I'll remind you {matched} ({FormatWhen(when)}) about '{_pendingTitle}'.";
                 _pending = PendingState.None;
                 return true;
@@ -220,6 +251,8 @@ namespace CybersecurityChatbotPart3
         private string ShowTasks()
         {
             var tasks = _repo.GetAllTasks().Where(t => !t.IsCompleted).Take(5).ToList();
+
+            _log.Add($"Showed pending tasks via chat ({tasks.Count} found).");
 
             if (tasks.Count == 0)
                 return "You have no pending tasks. Try: 'Add a task to enable two-factor authentication'.";

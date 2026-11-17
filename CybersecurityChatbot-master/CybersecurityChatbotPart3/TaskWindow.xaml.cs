@@ -12,6 +12,7 @@ namespace CybersecurityChatbotPart3
 
         // The main window listens to this so the chatbot can respond in the chat
         public event Action<string>? TaskChanged;
+        public event Action<string>? ActionLogged;
 
         public TaskWindow(TaskRepository repo)
         {
@@ -81,6 +82,9 @@ namespace CybersecurityChatbotPart3
                 ? $" I'll remind you on {reminder.Value:dd MMM yyyy}."
                 : " (no reminder set)";
             TaskChanged?.Invoke($"Task added: '{title}'.{reminderNote}");
+            ActionLogged?.Invoke(reminder.HasValue
+    ? $"Task added: '{title}' (reminder set for {reminder.Value:dd MMM yyyy})."
+    : $"Task added: '{title}' (no reminder set).");
 
             TitleTextBox.Clear();
             DescriptionTextBox.Clear();
@@ -113,6 +117,7 @@ namespace CybersecurityChatbotPart3
             }
 
             TaskChanged?.Invoke($"Nice work! Task completed: '{task.Title}'.");
+            ActionLogged?.Invoke($"Task completed: '{task.Title}'.");
             RefreshTasks();
         }
 
@@ -139,6 +144,7 @@ namespace CybersecurityChatbotPart3
             }
 
             TaskChanged?.Invoke($"Task deleted: '{task.Title}'.");
+            ActionLogged?.Invoke($"Task deleted: '{task.Title}'.");
             RefreshTasks();
         }
 

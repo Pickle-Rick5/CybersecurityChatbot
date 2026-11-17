@@ -14,6 +14,7 @@ namespace CybersecurityChatbotPart3
         private ChatEngine _engine = null!;
         private bool _awaitingName = true;
         private readonly TaskRepository _taskRepo = new TaskRepository();
+        private readonly ActivityLogger _log = new ActivityLogger();
         private NlpProcessor _nlp = null!;
         // Checks every 30 seconds whether any task reminder has come due
         private readonly DispatcherTimer _reminderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -67,6 +68,7 @@ namespace CybersecurityChatbotPart3
         {
             var window = new TaskWindow(_taskRepo) { Owner = this };
             window.TaskChanged += message => AddMessage($"Chatbot: {message}", "#00FF9C");
+            window.ActionLogged += description => _log.Add(description);
             window.ShowDialog();
         }
         private void QuizButton_Click(object sender, RoutedEventArgs e)
@@ -75,15 +77,23 @@ namespace CybersecurityChatbotPart3
             StartQuiz();
         }
 
-        private void StartQuiz()
+        private void StartQuiz(bool viaChat = false)
         {
+            _log.Add(viaChat ? "Quiz started via chat." : "Quiz started.");
+
             var window = new QuizWindow { Owner = this };
             window.QuizEnded += (answered, score, total, completed) =>
             {
                 if (completed)
+                {
+                    _log.Add($"Quiz completed: {answered} questions answered, scored {score} out of {total}.");
                     AddMessage($"Chatbot: Quiz complete! You scored {score} out of {total}. {QuizWindow.GetFinalFeedback(score, total)}", "#00FF9C");
+                }
                 else
+                {
+                    _log.Add($"Quiz closed early: {answered} questions answered, {score} correct.");
                     AddMessage($"Chatbot: Quiz closed early after {answered} question(s), with {score} correct. Come back any time to finish it!", "#FFD966");
+                }
             };
             window.ShowDialog();
         }
@@ -99,6 +109,7 @@ namespace CybersecurityChatbotPart3
                     // Add() returns false if we've already told the user about this one
                     if (_notifiedReminders.Add(task.Id))
                     {
+                        _log.Add($"Reminder triggered: '{task.Title}' is due.");
                         AddMessage($"Chatbot: Reminder: '{task.Title}' is due. {task.Description}", "#FFD966");
                     }
                 }
@@ -124,7 +135,7 @@ namespace CybersecurityChatbotPart3
             if (_awaitingName)
             {
                 _engine = new ChatEngine(text);
-                _nlp = new NlpProcessor(_taskRepo);
+                _nlp = new NlpProcessor(_taskRepo, _log);
                 _awaitingName = false;
                 AddMessage($"Chatbot: Welcome, {text}! Ask me about password, phishing, browsing, scam, or privacy, or click Tasks to manage your cybersecurity to-do list.", "#00FF9C");
                 CheckReminders();
@@ -134,6 +145,8 @@ namespace CybersecurityChatbotPart3
             if (_nlp.TryHandle(text, out string nlpReply))
             {
                 AddMessage($"Chatbot: {nlpReply}", "#00FF9C");
+                if (_nlp.ConsumeQuizRequest())
+                    StartQuiz(viaChat: true);
                 return;
             }
             string response = _engine.GetResponse(text, out bool exit);
@@ -141,6 +154,7 @@ namespace CybersecurityChatbotPart3
 
             if (exit)
                 InputTextBox.IsEnabled = false;
+
         }
 
         private void AddMessage(string text, string hexColor)
